@@ -14,21 +14,34 @@ import {
 export default function OTBank({ entries, breaks, compoffSpends, spendCompOff, deleteCompoffSpend }) {
   const [showSpendModal, setShowSpendModal] = useState(false);
   const [spendNote, setSpendNote] = useState('');
+  const [spendHours, setSpendHours] = useState('8');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const totalEarned = getTotalOTMinutes(entries, breaks);
   const balance = getOTBalanceMinutes(entries, breaks, compoffSpends);
   const totalSpent = compoffSpends.reduce((s, c) => s + c.minutes, 0);
-  const canSpend = balance >= COMPOFF_MINUTES;
+  const canSpend = balance > 0;
   const compoffDaysAvailable = Math.floor(balance / COMPOFF_MINUTES);
   const leftoverMinutes = balance % COMPOFF_MINUTES;
+
+  const balanceHours = balance / 60;
+  const parsedHours = parseFloat(spendHours) || 0;
+  const spendMinutes = Math.round(parsedHours * 60);
+  const spendValid = parsedHours > 0 && spendMinutes <= balance;
 
   // Weekly OT for the last 8 weeks
   const recentWeeks = getUniqueWeeks(entries).slice(0, 8);
 
+  function openSpendModal() {
+    setSpendHours(Math.min(8, balanceHours).toFixed(1).replace(/\.0$/, ''));
+    setShowSpendModal(true);
+  }
+
   function handleSpend() {
-    spendCompOff(spendNote);
+    if (!spendValid) return;
+    spendCompOff(spendNote, spendMinutes);
     setSpendNote('');
+    setSpendHours('8');
     setShowSpendModal(false);
   }
 
@@ -63,14 +76,14 @@ export default function OTBank({ entries, breaks, compoffSpends, spendCompOff, d
           <p className="text-xs text-red-400 font-semibold uppercase tracking-wide">Total Spent</p>
           <p className="text-xl font-bold text-red-600 mt-1">{formatDecimalHours(totalSpent)} hrs</p>
           <p className="text-xs text-red-400">
-            {compoffSpends.length} CompOff day{compoffSpends.length !== 1 ? 's' : ''}
+            {compoffSpends.length} spend{compoffSpends.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>
 
       {/* Spend CompOff button */}
       <button
-        onClick={() => canSpend ? setShowSpendModal(true) : null}
+        onClick={() => canSpend ? openSpendModal() : null}
         disabled={!canSpend}
         className={`w-full py-4 rounded-2xl font-bold text-lg transition-all ${
           canSpend
@@ -79,8 +92,8 @@ export default function OTBank({ entries, breaks, compoffSpends, spendCompOff, d
         }`}
       >
         {canSpend
-          ? `Spend 1 CompOff Day (−8h)`
-          : `Need ${formatDuration(COMPOFF_MINUTES - balance)} more OT`}
+          ? 'Spend CompOff'
+          : `No OT balance to spend`}
       </button>
 
       {/* Weekly OT breakdown */}
@@ -163,19 +176,38 @@ export default function OTBank({ entries, breaks, compoffSpends, spendCompOff, d
           onClick={e => { if (e.target === e.currentTarget) setShowSpendModal(false); }}
         >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Spend CompOff Day</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              This will deduct <span className="font-semibold text-violet-600">8 hours</span> from your OT balance.
-              Your new balance will be <span className="font-semibold">{formatDecimalHours(balance - COMPOFF_MINUTES)} hrs</span>.
-            </p>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Note (optional)</label>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Spend CompOff</h2>
+
+            <label className="block text-sm font-medium text-gray-600 mb-1">Hours to spend</label>
+            <div className="flex items-center gap-2 mb-1">
+              <input
+                type="number"
+                min="0.25"
+                max={balanceHours}
+                step="0.25"
+                value={spendHours}
+                onChange={e => setSpendHours(e.target.value)}
+                className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400 text-center font-semibold"
+                autoFocus
+              />
+              <span className="text-sm text-gray-500">hrs <span className="text-gray-400">(max {formatDecimalHours(balance)}h available)</span></span>
+            </div>
+            {!spendValid && parsedHours > 0 && (
+              <p className="text-xs text-red-500 mb-3">Exceeds your balance of {formatDecimalHours(balance)}h</p>
+            )}
+            {spendValid && (
+              <p className="text-xs text-gray-400 mb-3">
+                New balance: <span className="font-semibold text-gray-600">{formatDecimalHours(balance - spendMinutes)}h</span>
+              </p>
+            )}
+
+            <label className="block text-sm font-medium text-gray-600 mb-1 mt-2">Note (optional)</label>
             <input
               type="text"
               value={spendNote}
               onChange={e => setSpendNote(e.target.value)}
-              placeholder="e.g. Took Monday off, sick day…"
+              placeholder="e.g. Left early, took afternoon off…"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-400 mb-5"
-              autoFocus
               onKeyDown={e => e.key === 'Enter' && handleSpend()}
             />
             <div className="flex gap-3">
@@ -187,9 +219,14 @@ export default function OTBank({ entries, breaks, compoffSpends, spendCompOff, d
               </button>
               <button
                 onClick={handleSpend}
-                className="flex-1 py-2.5 bg-violet-500 text-white rounded-xl font-medium hover:bg-violet-600 transition-colors"
+                disabled={!spendValid}
+                className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
+                  spendValid
+                    ? 'bg-violet-500 text-white hover:bg-violet-600'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
               >
-                Confirm
+                Confirm −{parsedHours > 0 ? parsedHours : '?'}h
               </button>
             </div>
           </div>

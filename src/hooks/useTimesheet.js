@@ -80,14 +80,14 @@ export function useTimesheet() {
     setBreaks(prev => prev.filter(b => b.id !== id));
   }, []);
 
-  const spendCompOff = useCallback((note = '') => {
+  const spendCompOff = useCallback((note = '', minutes = 8 * 60) => {
     setCompoffSpends(prev => [
       ...prev,
       {
         id: generateId(),
         date: today(),
-        minutes: 8 * 60,
-        note: note || 'CompOff day taken',
+        minutes,
+        note: note || 'CompOff taken',
       },
     ]);
   }, []);
