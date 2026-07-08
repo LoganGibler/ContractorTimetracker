@@ -2,6 +2,13 @@ export const REGULAR_MINUTES = 8 * 60;         // 8h/day (used for daily progres
 export const WEEKLY_OT_THRESHOLD = 40 * 60;    // 40h/week — Florida rule
 export const COMPOFF_MINUTES = 8 * 60;         // 8h = 1 compoff day
 
+export const DEFAULT_DAY = {
+  start: '10:00',
+  end: '18:30',
+  breakMinutes: 30,
+  breakNote: 'Lunch',
+};
+
 export function getDurationMinutes(clockIn, clockOut) {
   if (!clockIn || !clockOut) return 0;
   return Math.max(0, (new Date(clockOut) - new Date(clockIn)) / 60000);

@@ -13,12 +13,13 @@ import {
   getWeeklyOTMinutes,
   getUniqueWeeks,
   today,
+  DEFAULT_DAY,
 } from '../utils/calculations';
 import { exportToExcel } from '../utils/excelExport';
 import ManualEntryModal from './ManualEntryModal';
 
 export default function History({
-  entries, breaks, compoffSpends, addManualEntry, updateEntry, deleteEntry, deleteBreak,
+  entries, breaks, compoffSpends, addManualEntry, updateEntry, deleteEntry, addBreak, deleteBreak,
 }) {
   const [selectedMonth, setSelectedMonth] = useState(() => today().slice(0, 7));
   const [showManual, setShowManual] = useState(false);
@@ -277,13 +278,16 @@ export default function History({
       {showManual && (
         <ManualEntryModal
           entry={editEntry}
-          onSave={(date, clockInISO, clockOutISO, note) => {
+          onSave={(date, clockInISO, clockOutISO, note, breakMinutes) => {
             if (editEntry) {
               updateEntry(editEntry.id, {
                 date, clockIn: clockInISO, clockOut: clockOutISO, note, isManual: true,
               });
             } else {
               addManualEntry(date, clockInISO, clockOutISO, note);
+            }
+            if (breakMinutes > 0) {
+              addBreak(date, breakMinutes, DEFAULT_DAY.breakNote);
             }
             setShowManual(false);
           }}

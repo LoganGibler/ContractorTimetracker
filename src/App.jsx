@@ -124,6 +124,7 @@ export default function App() {
             addManualEntry={addManualEntry}
             updateEntry={updateEntry}
             deleteEntry={deleteEntry}
+            addBreak={addBreak}
             deleteBreak={deleteBreak}
           />
         )}

@@ -12,6 +12,8 @@ import {
   getWeeklyOTMinutes,
   getWeekStart,
   getEntriesForDate,
+  toISO,
+  DEFAULT_DAY,
   WEEKLY_OT_THRESHOLD,
 } from '../utils/calculations';
 import ManualEntryModal from './ManualEntryModal';
@@ -56,6 +58,13 @@ export default function ClockPanel({
   const weekRemainingToOT = Math.max(0, WEEKLY_OT_THRESHOLD - weekNetTotal);
 
   const weekProgressPct = Math.min(100, (weekNetTotal / WEEKLY_OT_THRESHOLD) * 100);
+
+  function handleQuickDefaultDay() {
+    const clockInISO = toISO(todayStr, DEFAULT_DAY.start);
+    const clockOutISO = toISO(todayStr, DEFAULT_DAY.end);
+    addManualEntry(todayStr, clockInISO, clockOutISO, '');
+    addBreak(todayStr, DEFAULT_DAY.breakMinutes, DEFAULT_DAY.breakNote);
+  }
 
   return (
     <div className="p-4 max-w-lg mx-auto space-y-5">
@@ -153,6 +162,15 @@ export default function ClockPanel({
           + Manual Entry
         </button>
       </div>
+
+      {!activeSession && todayEntries.length === 0 && (
+        <button
+          onClick={handleQuickDefaultDay}
+          className="w-full py-3 border-2 border-dashed border-blue-200 text-blue-500 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-colors font-medium text-sm"
+        >
+          ⚡ Add Default Day (10:00 AM – 6:30 PM, 30 min break)
+        </button>
+      )}
 
       {/* Today's sessions */}
       {(todayEntries.length > 0 || todayBreaks.length > 0) && (
@@ -279,13 +297,16 @@ export default function ClockPanel({
       {showManual && (
         <ManualEntryModal
           entry={editEntry}
-          onSave={(date, clockInISO, clockOutISO, note) => {
+          onSave={(date, clockInISO, clockOutISO, note, breakMinutes) => {
             if (editEntry) {
               updateEntry(editEntry.id, {
                 date, clockIn: clockInISO, clockOut: clockOutISO, note, isManual: true,
               });
             } else {
               addManualEntry(date, clockInISO, clockOutISO, note);
+            }
+            if (breakMinutes > 0) {
+              addBreak(date, breakMinutes, DEFAULT_DAY.breakNote);
             }
             setShowManual(false);
           }}

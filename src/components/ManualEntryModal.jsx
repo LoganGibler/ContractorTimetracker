@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { today, isoToTimeInput, toISO } from '../utils/calculations';
+import { today, isoToTimeInput, toISO, DEFAULT_DAY } from '../utils/calculations';
 
 export default function ManualEntryModal({ entry, onSave, onClose }) {
   const [date, setDate] = useState(entry ? entry.date : today());
   const [clockInTime, setClockInTime] = useState(entry ? isoToTimeInput(entry.clockIn) : '');
   const [clockOutTime, setClockOutTime] = useState(entry ? isoToTimeInput(entry.clockOut) : '');
   const [note, setNote] = useState(entry ? entry.note || '' : '');
+  const [includeBreak, setIncludeBreak] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -13,6 +14,13 @@ export default function ManualEntryModal({ entry, onSave, onClose }) {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
+
+  function handleDefaultDay() {
+    setClockInTime(DEFAULT_DAY.start);
+    setClockOutTime(DEFAULT_DAY.end);
+    setIncludeBreak(true);
+    setError('');
+  }
 
   function handleSave() {
     if (!date) return setError('Date is required.');
@@ -26,7 +34,7 @@ export default function ManualEntryModal({ entry, onSave, onClose }) {
     }
 
     setError('');
-    onSave(date, clockInISO, clockOutISO, note);
+    onSave(date, clockInISO, clockOutISO, note, includeBreak ? DEFAULT_DAY.breakMinutes : 0);
   }
 
   return (
@@ -35,9 +43,17 @@ export default function ManualEntryModal({ entry, onSave, onClose }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-5">
+        <h2 className="text-lg font-bold text-gray-800 mb-1">
           {entry ? 'Edit Entry' : 'Add Manual Entry'}
         </h2>
+
+        <button
+          type="button"
+          onClick={handleDefaultDay}
+          className="w-full mb-4 py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-colors font-medium text-sm"
+        >
+          ⚡ Use Default Day (10:00 AM – 6:30 PM, 30 min break)
+        </button>
 
         <div className="space-y-4">
           <div>
@@ -72,6 +88,16 @@ export default function ManualEntryModal({ entry, onSave, onClose }) {
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-600 select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeBreak}
+              onChange={e => setIncludeBreak(e.target.checked)}
+              className="rounded border-gray-300 text-orange-500 focus:ring-orange-400"
+            />
+            Add a {DEFAULT_DAY.breakMinutes} min break
+          </label>
 
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-1">
